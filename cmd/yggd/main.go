@@ -400,6 +400,7 @@ func createControlMessageHandler(d *dispatcher) func(msg []byte, t transport.Tra
 			}
 		case yggdrasil.CommandNameDisconnect:
 			log.Info("disconnecting...")
+			log.Info("*****1 - calling disconnect for each worker*****")
 			for _, w := range d.workers {
 				disconnectWorker(w)
 			}
@@ -427,6 +428,7 @@ func createControlMessageHandler(d *dispatcher) func(msg []byte, t transport.Tra
 }
 
 func disconnectWorker(w worker) bool {
+	log.Info("*****2 - dial grpc*****")
 	conn, err := grpc.Dial("unix:"+w.addr, grpc.WithInsecure())
 	if err != nil {
 		log.Errorf("cannot dial socket: %v", err)
@@ -434,14 +436,18 @@ func disconnectWorker(w worker) bool {
 	}
 	defer conn.Close()
 
+	log.Info("*****3 - creating new worker client*****")
 	workerClient := pb.NewWorkerClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
+	log.Info("*****4 - calling disconnect*****")
 	_, err = workerClient.Disconnect(ctx, &pb.Empty{})
 	if err != nil {
 		log.Errorf("cannot disconnect worker %v", err)
 	}
+	log.Info("*****5 - finished! *****")
+
 	return false
 }
 
